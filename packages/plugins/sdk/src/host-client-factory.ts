@@ -160,7 +160,7 @@ export interface HostServices {
     getWorkspaceForIssue(params: WorkerToHostMethods["projects.getWorkspaceForIssue"][0]): Promise<WorkerToHostMethods["projects.getWorkspaceForIssue"][1]>;
   };
 
-  /** Provides `issues.list`, `issues.get`, `issues.create`, `issues.update`, `issues.listComments`, `issues.createComment`. */
+  /** Provides `issues.list`, `issues.get`, `issues.create`, `issues.update`, `issues.listComments`, `issues.createComment`, `issues.listDocuments`, `issues.listDocumentRevisions`. */
   issues: {
     list(params: WorkerToHostMethods["issues.list"][0]): Promise<WorkerToHostMethods["issues.list"][1]>;
     get(params: WorkerToHostMethods["issues.get"][0]): Promise<WorkerToHostMethods["issues.get"][1]>;
@@ -168,6 +168,8 @@ export interface HostServices {
     update(params: WorkerToHostMethods["issues.update"][0]): Promise<WorkerToHostMethods["issues.update"][1]>;
     listComments(params: WorkerToHostMethods["issues.listComments"][0]): Promise<WorkerToHostMethods["issues.listComments"][1]>;
     createComment(params: WorkerToHostMethods["issues.createComment"][0]): Promise<WorkerToHostMethods["issues.createComment"][1]>;
+    listDocuments(params: WorkerToHostMethods["issues.listDocuments"][0]): Promise<WorkerToHostMethods["issues.listDocuments"][1]>;
+    listDocumentRevisions(params: WorkerToHostMethods["issues.listDocumentRevisions"][0]): Promise<WorkerToHostMethods["issues.listDocumentRevisions"][1]>;
   };
 
   /** Provides `issues.documents.list`, `issues.documents.get`, `issues.documents.upsert`, `issues.documents.delete`. */
@@ -313,6 +315,8 @@ const METHOD_CAPABILITY_MAP: Record<WorkerToHostMethodName, PluginCapability | n
   "issues.update": "issues.update",
   "issues.listComments": "issue.comments.read",
   "issues.createComment": "issue.comments.create",
+  "issues.listDocuments": "issue.documents.read",
+  "issues.listDocumentRevisions": "issue.documents.read",
 
   // Issue Documents
   "issues.documents.list": "issue.documents.read",
@@ -508,6 +512,12 @@ export function createHostClientHandlers(
     }),
     "issues.createComment": gated("issues.createComment", async (params) => {
       return services.issues.createComment(params);
+    }),
+    "issues.listDocuments": gated("issues.listDocuments", async (params) => {
+      return services.issues.listDocuments(params);
+    }),
+    "issues.listDocumentRevisions": gated("issues.listDocumentRevisions", async (params) => {
+      return services.issues.listDocumentRevisions(params);
     }),
 
     // Issue Documents

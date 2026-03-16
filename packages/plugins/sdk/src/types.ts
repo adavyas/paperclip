@@ -21,6 +21,7 @@ import type {
   IssueComment,
   IssueDocument,
   IssueDocumentSummary,
+  DocumentRevision,
   Agent,
   Goal,
 } from "@paperclipai/shared";
@@ -65,6 +66,7 @@ export type {
   IssueComment,
   IssueDocument,
   IssueDocumentSummary,
+  DocumentRevision,
   Agent,
   Goal,
 } from "@paperclipai/shared";
@@ -183,6 +185,8 @@ export interface ToolRunContext {
   companyId: string;
   /** UUID of the project the run belongs to. */
   projectId: string;
+  /** UUID of the issue this run is scoped to, if applicable. */
+  issueId?: string;
 }
 
 /**
@@ -917,6 +921,16 @@ export interface PluginIssuesClient {
   ): Promise<IssueComment>;
   /** Read and write issue documents. Requires `issue.documents.read` / `issue.documents.write`. */
   documents: PluginIssueDocumentsClient;
+  /**
+   * List all documents attached to an issue.
+   * Requires the `issue.documents.read` capability.
+   */
+  listDocuments(issueId: string, companyId: string): Promise<IssueDocument[]>;
+  /**
+   * List all revisions for a specific issue document.
+   * Requires the `issue.documents.read` capability.
+   */
+  listDocumentRevisions(issueId: string, documentKey: string, companyId: string): Promise<DocumentRevision[]>;
 }
 
 /**

@@ -7,6 +7,8 @@ import type {
   Project,
   Issue,
   IssueComment,
+  IssueDocument,
+  DocumentRevision,
   Agent,
   Goal,
 } from "@paperclipai/shared";
@@ -50,6 +52,8 @@ export interface TestHarness {
     projects?: Project[];
     issues?: Issue[];
     issueComments?: IssueComment[];
+    issueDocuments?: IssueDocument[];
+    documentRevisions?: DocumentRevision[];
     agents?: Agent[];
     goals?: Goal[];
   }): void;
@@ -142,6 +146,8 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
   const projects = new Map<string, Project>();
   const issues = new Map<string, Issue>();
   const issueComments = new Map<string, IssueComment[]>();
+  const issueDocuments = new Map<string, IssueDocument[]>();
+  const documentRevisions = new Map<string, DocumentRevision[]>(); // key: `${issueId}:${documentKey}`
   const agents = new Map<string, Agent>();
   const goals = new Map<string, Goal>();
   const projectWorkspaces = new Map<string, PluginWorkspace[]>();
@@ -431,12 +437,12 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
         async list(issueId, companyId) {
           requireCapability(manifest, capabilitySet, "issue.documents.read");
           if (!isInCompany(issues.get(issueId), companyId)) return [];
-          return [];
+          return (issueDocuments.get(issueId) ?? []).map(({ body: _body, ...summary }) => summary);
         },
-        async get(issueId, _key, companyId) {
+        async get(issueId, key, companyId) {
           requireCapability(manifest, capabilitySet, "issue.documents.read");
           if (!isInCompany(issues.get(issueId), companyId)) return null;
-          return null;
+          return (issueDocuments.get(issueId) ?? []).find((document) => document.key === key) ?? null;
         },
         async upsert(input) {
           requireCapability(manifest, capabilitySet, "issue.documents.write");
@@ -453,6 +459,15 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
             throw new Error(`Issue not found: ${issueId}`);
           }
         },
+      async listDocuments(issueId, companyId) {
+        requireCapability(manifest, capabilitySet, "issue.documents.read");
+        if (!isInCompany(issues.get(issueId), companyId)) return [];
+        return issueDocuments.get(issueId) ?? [];
+      },
+      async listDocumentRevisions(issueId, documentKey, companyId) {
+        requireCapability(manifest, capabilitySet, "issue.documents.read");
+        if (!isInCompany(issues.get(issueId), companyId)) return [];
+        return documentRevisions.get(`${issueId}:${documentKey}`) ?? [];
       },
     },
     agents: {
@@ -666,6 +681,17 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
         list.push(row);
         issueComments.set(row.issueId, list);
       }
+      for (const row of input.issueDocuments ?? []) {
+        const list = issueDocuments.get(row.issueId) ?? [];
+        list.push(row);
+        issueDocuments.set(row.issueId, list);
+      }
+      for (const row of input.documentRevisions ?? []) {
+        const key = `${row.issueId}:${row.key}`;
+        const list = documentRevisions.get(key) ?? [];
+        list.push(row);
+        documentRevisions.set(key, list);
+      }
       for (const row of input.agents ?? []) agents.set(row.id, row);
       for (const row of input.goals ?? []) goals.set(row.id, row);
     },
@@ -723,6 +749,7 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
         runId: runCtx.runId ?? randomUUID(),
         companyId: runCtx.companyId ?? "company-test",
         projectId: runCtx.projectId ?? "project-test",
+        issueId: runCtx.issueId,
       };
       return await handler(params, ctxToPass) as T;
     },

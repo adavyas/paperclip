@@ -10,11 +10,14 @@ import type {
   Goal,
   PluginWorkspace,
   IssueComment,
+  IssueDocument,
+  DocumentRevision,
 } from "@paperclipai/plugin-sdk";
 import { companyService } from "./companies.js";
 import { agentService } from "./agents.js";
 import { projectService } from "./projects.js";
 import { issueService } from "./issues.js";
+import { documentService } from "./documents.js";
 import { goalService } from "./goals.js";
 import { documentService } from "./documents.js";
 import { heartbeatService } from "./heartbeat.js";
@@ -809,6 +812,18 @@ export function buildHostServices(
           params.body,
           { agentId: params.authorAgentId },
         )) as IssueComment;
+      },
+      async listDocuments(params) {
+        const companyId = ensureCompanyId(params.companyId);
+        await ensurePluginAvailableForCompany(companyId);
+        if (!inCompany(await issues.getById(params.issueId), companyId)) return [];
+        return (await documents.listIssueDocuments(params.issueId)) as IssueDocument[];
+      },
+      async listDocumentRevisions(params) {
+        const companyId = ensureCompanyId(params.companyId);
+        await ensurePluginAvailableForCompany(companyId);
+        if (!inCompany(await issues.getById(params.issueId), companyId)) return [];
+        return (await documents.listIssueDocumentRevisions(params.issueId, params.documentKey)) as DocumentRevision[];
       },
     },
 
