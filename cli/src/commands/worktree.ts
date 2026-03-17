@@ -466,7 +466,13 @@ async function isPortAvailable(port: number): Promise<boolean> {
   return await new Promise<boolean>((resolve) => {
     const server = createServer();
     server.unref();
-    server.once("error", () => resolve(false));
+    server.once("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EPERM" || error.code === "EACCES") {
+        resolve(true);
+        return;
+      }
+      resolve(false);
+    });
     server.listen(port, "127.0.0.1", () => {
       server.close(() => resolve(true));
     });
@@ -474,11 +480,19 @@ async function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(preferredPort: number, reserved = new Set<number>()): Promise<number> {
-  let port = Math.max(1, Math.trunc(preferredPort));
-  while (reserved.has(port) || !(await isPortAvailable(port))) {
-    port += 1;
+  const minPort = 1;
+  const maxPort = 65_535;
+  const startPort = Math.min(maxPort, Math.max(minPort, Math.trunc(preferredPort)));
+  let port = startPort;
+
+  for (let attempts = 0; attempts < maxPort; attempts += 1) {
+    if (!reserved.has(port) && (await isPortAvailable(port))) {
+      return port;
+    }
+    port = port >= maxPort ? minPort : port + 1;
   }
-  return port;
+
+  throw new Error("Unable to find an available TCP port");
 }
 
 function resolveRepoManagedWorktreesRoot(cwd: string): string | null {

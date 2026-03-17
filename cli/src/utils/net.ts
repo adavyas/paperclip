@@ -6,6 +6,9 @@ export function checkPort(port: number): Promise<{ available: boolean; error?: s
     server.once("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "EADDRINUSE") {
         resolve({ available: false, error: `Port ${port} is already in use` });
+      } else if (err.code === "EPERM" || err.code === "EACCES") {
+        // Some restricted environments forbid bind probes entirely.
+        resolve({ available: true });
       } else {
         resolve({ available: false, error: err.message });
       }
