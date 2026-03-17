@@ -437,7 +437,22 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
         async list(issueId, companyId) {
           requireCapability(manifest, capabilitySet, "issue.documents.read");
           if (!isInCompany(issues.get(issueId), companyId)) return [];
-          return (issueDocuments.get(issueId) ?? []).map(({ body: _body, ...summary }) => summary);
+          return (issueDocuments.get(issueId) ?? []).map((document) => ({
+            id: document.id,
+            companyId: document.companyId,
+            issueId: document.issueId,
+            key: document.key,
+            title: document.title,
+            format: document.format,
+            latestRevisionId: document.latestRevisionId,
+            latestRevisionNumber: document.latestRevisionNumber,
+            createdByAgentId: document.createdByAgentId,
+            createdByUserId: document.createdByUserId,
+            updatedByAgentId: document.updatedByAgentId,
+            updatedByUserId: document.updatedByUserId,
+            createdAt: document.createdAt,
+            updatedAt: document.updatedAt,
+          }));
         },
         async get(issueId, key, companyId) {
           requireCapability(manifest, capabilitySet, "issue.documents.read");
@@ -459,6 +474,7 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
             throw new Error(`Issue not found: ${issueId}`);
           }
         },
+      },
       async listDocuments(issueId, companyId) {
         requireCapability(manifest, capabilitySet, "issue.documents.read");
         if (!isInCompany(issues.get(issueId), companyId)) return [];

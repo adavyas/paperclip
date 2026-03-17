@@ -10,8 +10,6 @@ const manifest: PaperclipPluginManifestV1 = {
   author: "Paperclip",
   categories: ["connector", "automation", "ui"],
   capabilities: [
-    "companies.read",
-    "projects.read",
     "issues.read",
     "issue.comments.read",
     "issue.documents.read",

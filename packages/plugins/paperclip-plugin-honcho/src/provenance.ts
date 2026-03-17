@@ -1,5 +1,5 @@
-import type { Issue, IssueComment, IssueDocument, DocumentRevision } from "@paperclipai/plugin-sdk";
-import type { HonchoActor, HonchoProvenance } from "./types.js";
+import type { Issue, IssueComment, DocumentRevision } from "@paperclipai/plugin-sdk";
+import type { HonchoActor, HonchoProvenance, IssueDocumentRef } from "./types.js";
 import { issueEntityUrl } from "./ids.js";
 
 export function actorFromComment(comment: IssueComment): HonchoActor {
@@ -62,7 +62,7 @@ export function buildDocumentProvenance(
   };
 }
 
-export function splitDocumentIntoSections(document: IssueDocument, revision: DocumentRevision, sectionSize: number, overlap: number) {
+export function splitDocumentIntoSections(document: IssueDocumentRef, revision: DocumentRevision, sectionSize: number, overlap: number) {
   const body = revision.body;
   if (!body.trim()) return [];
   const sections: Array<{ key: string; index: number; content: string }> = [];

@@ -19,7 +19,6 @@ import { projectService } from "./projects.js";
 import { issueService } from "./issues.js";
 import { documentService } from "./documents.js";
 import { goalService } from "./goals.js";
-import { documentService } from "./documents.js";
 import { heartbeatService } from "./heartbeat.js";
 import { subscribeCompanyLiveEvents } from "./live-events.js";
 import { randomUUID } from "node:crypto";

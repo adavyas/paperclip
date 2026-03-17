@@ -1,7 +1,7 @@
 import { definePlugin, runWorker, type ToolRunContext, type ToolResult } from "@paperclipai/plugin-sdk";
 import manifest from "./manifest.js";
 import { ACTION_KEYS, DATA_KEYS, DEFAULT_SEARCH_LIMIT, TOOL_NAMES } from "./constants.js";
-import { assertConfigured, getResolvedConfig } from "./config.js";
+import { assertConfigured, getResolvedConfig, validateConfig } from "./config.js";
 import { createHonchoClient } from "./honcho-client.js";
 import { backfillCompany, getIssueContext, loadIssueStatusData, replayIssue, searchMemory, syncIssue } from "./sync.js";
 
@@ -19,6 +19,8 @@ function inferIssueId(params: Record<string, unknown>, runCtx?: Partial<ToolRunC
 
 const plugin = definePlugin({
   async setup(ctx) {
+    const initialConfig = await getResolvedConfig(ctx);
+
     ctx.data.register(DATA_KEYS.issueStatus, async (params) => {
       const issueId = requireString(params.issueId, "issueId");
       const companyId = requireString(params.companyId, "companyId");
@@ -27,10 +29,12 @@ const plugin = definePlugin({
 
     ctx.actions.register(ACTION_KEYS.testConnection, async () => {
       const config = await getResolvedConfig(ctx);
-      assertConfigured(config);
+      const validation = validateConfig(config);
+      if (!validation.ok) {
+        throw new Error(validation.errors?.join("; ") ?? "Honcho config is invalid");
+      }
       const client = await createHonchoClient({ ctx, config });
-      const companies = await ctx.companies.list({ limit: 1, offset: 0 });
-      const sampleCompanyId = companies[0]?.id ?? "paperclip-test";
+      const sampleCompanyId = "connection-test";
       const workspaceId = await client.ensureWorkspace(sampleCompanyId);
       return {
         ok: true,
@@ -162,40 +166,46 @@ const plugin = definePlugin({
       },
     );
 
-    ctx.tools.register(
-      TOOL_NAMES.askPeer,
-      manifest.tools?.find((tool) => tool.name === TOOL_NAMES.askPeer) ?? {
-        displayName: "Honcho Ask Peer",
-        description: "Ask a Honcho peer",
-        parametersSchema: { type: "object", properties: {} },
-      },
-      async (params, runCtx): Promise<ToolResult> => {
-        const config = await getResolvedConfig(ctx);
-        if (!config.enablePeerChat) {
-          return { error: "Honcho peer chat is disabled in plugin config" };
-        }
-        assertConfigured(config);
-        const input = params as Record<string, unknown>;
-        const targetPeerId = requireString(input.targetPeerId, "targetPeerId");
-        const query = requireString(input.query, "query");
-        const issueId = inferIssueId(input, runCtx) ?? undefined;
-        const client = await createHonchoClient({ ctx, config });
-        const response = await client.askPeer(runCtx.companyId, runCtx.agentId, {
-          targetPeerId,
-          query,
-          issueId,
-        });
-        const content = response.text ?? response.response ?? response.messages?.map((message) => message.content).filter(Boolean).join("\n\n") ?? "No Honcho peer response returned.";
-        return {
-          content,
-          data: response,
-        };
-      },
-    );
+    if (initialConfig.enablePeerChat) {
+      ctx.tools.register(
+        TOOL_NAMES.askPeer,
+        manifest.tools?.find((tool) => tool.name === TOOL_NAMES.askPeer) ?? {
+          displayName: "Honcho Ask Peer",
+          description: "Ask a Honcho peer",
+          parametersSchema: { type: "object", properties: {} },
+        },
+        async (params, runCtx): Promise<ToolResult> => {
+          const config = await getResolvedConfig(ctx);
+          if (!config.enablePeerChat) {
+            return { error: "Honcho peer chat is disabled in plugin config" };
+          }
+          assertConfigured(config);
+          const input = params as Record<string, unknown>;
+          const targetPeerId = requireString(input.targetPeerId, "targetPeerId");
+          const query = requireString(input.query, "query");
+          const issueId = inferIssueId(input, runCtx) ?? undefined;
+          const client = await createHonchoClient({ ctx, config });
+          const response = await client.askPeer(runCtx.companyId, runCtx.agentId, {
+            targetPeerId,
+            query,
+            issueId,
+          });
+          const content = response.text ?? response.response ?? response.messages?.map((message) => message.content).filter(Boolean).join("\n\n") ?? "No Honcho peer response returned.";
+          return {
+            content,
+            data: response,
+          };
+        },
+      );
+    }
   },
 
   async onHealth() {
     return { status: "ok", message: "Honcho worker is running" };
+  },
+
+  async onValidateConfig(config) {
+    return validateConfig(config);
   },
 });
 

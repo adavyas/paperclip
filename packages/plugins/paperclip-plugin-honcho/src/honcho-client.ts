@@ -194,7 +194,7 @@ export class HonchoClient {
       company_id: companyId,
       agent_id: agentId,
     });
-    const sessionId = params.scope === "workspace" ? undefined : params.issueId ? this.sessionId(params.issueId) : undefined;
+    const scopedSessionId = params.scope === "workspace" ? undefined : params.issueId ? this.sessionId(params.issueId) : undefined;
     const payload = await requestJson(
       this.ctx,
       this.config,
@@ -203,8 +203,8 @@ export class HonchoClient {
       {
         method: "POST",
         body: JSON.stringify({
-          session_id: sessionId,
-          target: params.issueId ? this.sessionId(params.issueId) : undefined,
+          session_id: scopedSessionId,
+          target: scopedSessionId,
           search_query: params.query,
           search_top_k: params.limit,
         }),

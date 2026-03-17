@@ -1,4 +1,4 @@
-import type { DocumentRevision, Issue, IssueComment, IssueDocument, PluginContext } from "@paperclipai/plugin-sdk";
+import type { DocumentRevision, Issue, IssueComment, PluginContext } from "@paperclipai/plugin-sdk";
 import {
   DEFAULT_BACKFILL_BATCH_SIZE,
   DEFAULT_DOCUMENT_SECTION_OVERLAP,
@@ -49,7 +49,7 @@ async function fetchIssueResources(
   const comments = (await ctx.issues.listComments(issueId, companyId)).sort(compareComments);
   const documents: IssueDocumentBundle[] = config.syncIssueDocuments
     ? await Promise.all(
-      (await ctx.issues.listDocuments(issueId, companyId)).map(async (document) => ({
+      (await ctx.issues.documents.list(issueId, companyId)).map(async (document) => ({
         document,
         revisions: (await ctx.issues.listDocumentRevisions(issueId, document.key, companyId)).sort(compareRevisions),
       })),

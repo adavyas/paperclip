@@ -1,7 +1,6 @@
 import type {
   Issue,
   IssueComment,
-  IssueDocument,
   DocumentRevision,
   PluginContext,
   ScopeKey,
@@ -162,8 +161,13 @@ export type IssueMemoryStatusData = {
 
 export type WorkerActionParams = Record<string, unknown>;
 
+export type IssueDocumentRef = {
+  key: string;
+  title: string | null;
+};
+
 export type IssueDocumentBundle = {
-  document: IssueDocument;
+  document: IssueDocumentRef;
   revisions: DocumentRevision[];
 };
 

@@ -638,6 +638,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           async delete(issueId: string, key: string, companyId: string) {
             return callHost("issues.documents.delete", { issueId, key, companyId });
           },
+        },
         async listDocuments(issueId: string, companyId: string) {
           return callHost("issues.listDocuments", { issueId, companyId });
         },
