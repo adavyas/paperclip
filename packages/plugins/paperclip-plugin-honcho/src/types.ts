@@ -86,6 +86,28 @@ export type HonchoSessionSummary = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type HonchoContextMessage = {
+  role?: string | null;
+  content?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type HonchoContextSummary = {
+  content?: string | null;
+  message_id?: string | null;
+  summary_type?: string | null;
+  created_at?: string | null;
+  token_count?: number | null;
+};
+
+export type HonchoSessionContextResult = {
+  summary?: HonchoContextSummary | string | null;
+  content?: string | null;
+  context?: string | null;
+  messages?: HonchoContextMessage[] | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type HonchoSearchResult = {
   id?: string | null;
   content?: string | null;
@@ -134,6 +156,7 @@ export type HonchoIssueContext = {
   sessionId: string;
   workspaceId: string;
   summaries: HonchoSessionSummary[];
+  context: HonchoSessionContextResult | null;
   preview: string | null;
 };
 

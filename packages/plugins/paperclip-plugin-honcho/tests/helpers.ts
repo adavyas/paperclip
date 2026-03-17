@@ -93,15 +93,21 @@ export function installFetchMock(options: FetchMockOptions = {}) {
     if (url.includes("/peers")) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
-    if (url.includes("/sessions") && !url.includes("/messages") && !url.includes("/summaries")) {
+    if (url.includes("/sessions") && !url.includes("/messages") && !url.includes("/context")) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
     if (url.includes("/messages")) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
-    if (url.includes("/summaries")) {
+    if (url.includes("/context")) {
       return new Response(JSON.stringify({
-        summaries: (options.summaries ?? ["Investigating auth regression and next steps."]).map((summary) => ({ summary })),
+        summary: {
+          content: options.summaries?.[0] ?? "Investigating auth regression and next steps.",
+        },
+        messages: (options.summaries ?? ["Investigating auth regression and next steps."]).map((summary) => ({
+          role: "assistant",
+          content: summary,
+        })),
       }), { status: 200 });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });

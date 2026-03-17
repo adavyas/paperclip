@@ -129,7 +129,12 @@ function buildDocumentMessages(
 
 async function refreshContextPreview(ctx: PluginContext, issue: Issue, config: HonchoResolvedConfig): Promise<HonchoIssueContext> {
   const client = await createHonchoClient({ ctx, config });
-  const context = await client.getIssueContext(issue.companyId, issue.id);
+  const targetUserId = issue.assigneeUserId ?? issue.createdByUserId ?? null;
+  const context = await client.getIssueContext(
+    issue.companyId,
+    issue.id,
+    targetUserId ? peerIdForUser(targetUserId) : null,
+  );
   await patchIssueSyncStatus(ctx, issue.id, {
     latestContextPreview: context.preview,
     latestContextFetchedAt: new Date().toISOString(),

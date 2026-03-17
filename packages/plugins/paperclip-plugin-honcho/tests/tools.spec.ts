@@ -23,6 +23,28 @@ describe("honcho tools", () => {
     expect(result.error).toBe("issueId is required");
   });
 
+  it("uses the v3 session context endpoint with summary mode and a user peer target", async () => {
+    const { requests } = installFetchMock();
+    const harness = createHonchoHarness();
+
+    await plugin.definition.setup(harness.ctx);
+
+    const result = await harness.executeTool("honcho_get_issue_context", {}, {
+      companyId: "co_1",
+      projectId: "proj_1",
+      agentId: "agent_1",
+      runId: "run_1",
+      issueId: "iss_1",
+    });
+
+    expect(result.content).toContain("Investigating auth regression");
+    const contextRequest = requestsMatching(requests, "/context?")[0];
+    expect(contextRequest?.url).toContain("/v3/workspaces/paperclip%3Aco_1/sessions/issue%3Aiss_1/context?");
+    expect(contextRequest?.url).toContain("summary=true");
+    expect(contextRequest?.url).toContain("tokens=2000");
+    expect(contextRequest?.url).toContain("peer_target=user%3Auser_1");
+  });
+
   it("uses workspace scope by default when no issue context is present", async () => {
     const { requests } = installFetchMock();
     const harness = createHonchoHarness();

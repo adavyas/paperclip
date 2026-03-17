@@ -1,5 +1,5 @@
 import type { PluginContext } from "@paperclipai/plugin-sdk";
-import { DEFAULT_CONTEXT_SUMMARY_LIMIT, HONCHO_CONNECTION_PROBE_PATH, HONCHO_V2_PATH, HONCHO_V3_PATH } from "./constants.js";
+import { DEFAULT_CONTEXT_SUMMARY_LIMIT, DEFAULT_CONTEXT_TOKEN_LIMIT, HONCHO_CONNECTION_PROBE_PATH, HONCHO_V3_PATH } from "./constants.js";
 import { peerIdForAgent, sessionIdForIssue, workspaceIdForCompany } from "./ids.js";
 import type {
   AskPeerParams,
@@ -10,6 +10,7 @@ import type {
   HonchoRepresentationResult,
   HonchoResolvedConfig,
   HonchoSearchResult,
+  HonchoSessionContextResult,
   HonchoSessionSummary,
   SearchMemoryParams,
 } from "./types.js";
@@ -43,6 +44,33 @@ async function assertOk(res: Response | { status: number; body: string }, contex
 
 function joinUrl(baseUrl: string, pathname: string): string {
   return `${baseUrl.replace(/\/+$/, "")}${pathname}`;
+}
+
+function buildIssueContextPreview(payload: HonchoSessionContextResult): string | null {
+  const candidates: string[] = [];
+  const summaryText = typeof payload.summary === "string"
+    ? payload.summary
+    : typeof payload.summary?.content === "string"
+      ? payload.summary.content
+      : null;
+  if (typeof summaryText === "string" && summaryText.trim()) {
+    candidates.push(summaryText.trim());
+  }
+  if (typeof payload.context === "string" && payload.context.trim()) {
+    candidates.push(payload.context.trim());
+  } else if (typeof payload.content === "string" && payload.content.trim()) {
+    candidates.push(payload.content.trim());
+  }
+  if (candidates.length === 0 && Array.isArray(payload.messages)) {
+    const messagePreview = payload.messages
+      .map((message) => typeof message.content === "string" ? message.content.trim() : "")
+      .filter((value) => value.length > 0)
+      .slice(0, DEFAULT_CONTEXT_SUMMARY_LIMIT)
+      .join("\n\n")
+      .trim();
+    if (messagePreview) candidates.push(messagePreview);
+  }
+  return candidates[0] ?? null;
 }
 
 async function requestJson(
@@ -168,35 +196,49 @@ export class HonchoClient {
     );
   }
 
-  async getIssueContext(companyId: string, issueId: string): Promise<HonchoIssueContext> {
+  async getIssueContext(companyId: string, issueId: string, userPeerId?: string | null): Promise<HonchoIssueContext> {
     const sessionId = await this.ensureSession(companyId, issueId);
     const workspaceId = this.workspaceId(companyId);
+    const query = new URLSearchParams({
+      summary: "true",
+      tokens: String(DEFAULT_CONTEXT_TOKEN_LIMIT),
+    });
+    if (userPeerId) {
+      query.set("peer_target", userPeerId);
+    }
     const payload = await requestJson(
       this.ctx,
       this.config,
       this.apiKey,
-      `${HONCHO_V2_PATH}/workspaces/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/summaries`,
+      `${HONCHO_V3_PATH}/workspaces/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/context?${query.toString()}`,
       {
         method: "GET",
       },
     );
-    const summaries = Array.isArray(payload.summaries)
-      ? (payload.summaries as HonchoSessionSummary[])
-      : Array.isArray(payload.items)
-        ? (payload.items as HonchoSessionSummary[])
+    const contextPayload = payload as HonchoSessionContextResult;
+    const summaryContent = typeof contextPayload.summary === "string"
+      ? contextPayload.summary
+      : typeof contextPayload.summary?.content === "string"
+        ? contextPayload.summary.content
+        : null;
+    const summaries: HonchoSessionSummary[] = summaryContent && summaryContent.trim()
+      ? [{ summary: summaryContent }]
+      : Array.isArray(contextPayload.messages)
+        ? contextPayload.messages.reduce<HonchoSessionSummary[]>((items, message) => {
+          if (typeof message.content === "string" && message.content.trim()) {
+            items.push({ content: message.content, metadata: message.metadata ?? null });
+          }
+          return items;
+        }, []).slice(0, DEFAULT_CONTEXT_SUMMARY_LIMIT)
         : [];
-    const preview = summaries
-      .map((summary) => summary.summary ?? summary.content ?? "")
-      .filter((value) => value.trim().length > 0)
-      .slice(0, DEFAULT_CONTEXT_SUMMARY_LIMIT)
-      .join("\n\n")
-      .trim() || null;
+    const preview = buildIssueContextPreview(contextPayload);
     return {
       issueId,
       issueIdentifier: null,
       sessionId,
       workspaceId,
       summaries,
+      context: contextPayload,
       preview,
     };
   }
