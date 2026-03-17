@@ -2,9 +2,12 @@ import {
   usePluginAction,
   usePluginData,
   type PluginDetailTabProps,
+  type PluginSettingsPageProps,
+  type PluginWidgetProps,
 } from "@paperclipai/plugin-sdk/ui";
-import { ACTION_KEYS, DATA_KEYS } from "../constants.js";
-import type { IssueMemoryStatusData } from "../types.js";
+import { useEffect, useMemo, useState } from "react";
+import { ACTION_KEYS, DATA_KEYS, DEFAULT_CONFIG, PLUGIN_ID } from "../constants.js";
+import type { IssueMemoryStatusData, SetupStatusData } from "../types.js";
 
 const sectionStyle: React.CSSProperties = {
   display: "grid",
@@ -21,6 +24,12 @@ const cardStyle: React.CSSProperties = {
   background: "rgba(15, 23, 42, 0.02)",
 };
 
+const heroStyle: React.CSSProperties = {
+  ...cardStyle,
+  gap: "0.65rem",
+  background: "linear-gradient(135deg, rgba(14, 116, 144, 0.09), rgba(15, 23, 42, 0.03))",
+};
+
 const buttonStyle: React.CSSProperties = {
   width: "fit-content",
   border: "1px solid rgba(15, 23, 42, 0.15)",
@@ -30,11 +39,421 @@ const buttonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
+const primaryButtonStyle: React.CSSProperties = {
+  ...buttonStyle,
+  background: "#0f172a",
+  color: "white",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  border: "1px solid rgba(15, 23, 42, 0.12)",
+  borderRadius: "10px",
+  padding: "0.7rem 0.8rem",
+  fontSize: "0.92rem",
+  background: "white",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "grid",
+  gap: "0.4rem",
+  fontSize: "0.9rem",
+};
+
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: "0.9rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+};
+
+type SettingsConfig = {
+  honchoApiBaseUrl: string;
+  honchoApiKeySecretRef: string;
+  workspacePrefix: string;
+  syncIssueComments: boolean;
+  syncIssueDocuments: boolean;
+  enablePeerChat: boolean;
+};
+
+type SettingsConnectionState = {
+  ok: boolean;
+  workspaceId: string | null;
+  at: string | null;
+} | null;
+
+function hostFetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  return fetch(path, {
+    credentials: "include",
+    headers: {
+      "content-type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    ...init,
+  }).then(async (response) => {
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Request failed: ${response.status}`);
+    }
+    return await response.json() as T;
+  });
+}
+
+function normalizeSettingsConfig(configJson: Record<string, unknown> | null | undefined): SettingsConfig {
+  const source = configJson ?? {};
+  return {
+    honchoApiBaseUrl: typeof source.honchoApiBaseUrl === "string" ? source.honchoApiBaseUrl : DEFAULT_CONFIG.honchoApiBaseUrl,
+    honchoApiKeySecretRef: typeof source.honchoApiKeySecretRef === "string" ? source.honchoApiKeySecretRef : DEFAULT_CONFIG.honchoApiKeySecretRef,
+    workspacePrefix: typeof source.workspacePrefix === "string" ? source.workspacePrefix : DEFAULT_CONFIG.workspacePrefix,
+    syncIssueComments: typeof source.syncIssueComments === "boolean" ? source.syncIssueComments : DEFAULT_CONFIG.syncIssueComments,
+    syncIssueDocuments: typeof source.syncIssueDocuments === "boolean" ? source.syncIssueDocuments : DEFAULT_CONFIG.syncIssueDocuments,
+    enablePeerChat: typeof source.enablePeerChat === "boolean" ? source.enablePeerChat : DEFAULT_CONFIG.enablePeerChat,
+  };
+}
+
+function useSettingsConfig() {
+  const [configJson, setConfigJson] = useState<SettingsConfig>({ ...DEFAULT_CONFIG });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    hostFetchJson<{ configJson?: Record<string, unknown> | null } | null>(`/api/plugins/${PLUGIN_ID}/config`)
+      .then((result) => {
+        if (cancelled) return;
+        setConfigJson(normalizeSettingsConfig(result?.configJson));
+        setError(null);
+      })
+      .catch((nextError) => {
+        if (cancelled) return;
+        setError(nextError instanceof Error ? nextError.message : String(nextError));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function save(nextConfig: SettingsConfig) {
+    setSaving(true);
+    try {
+      await hostFetchJson(`/api/plugins/${PLUGIN_ID}/config`, {
+        method: "POST",
+        body: JSON.stringify({ configJson: nextConfig }),
+      });
+      setConfigJson(nextConfig);
+      setError(null);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      throw nextError;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function test(nextConfig: SettingsConfig) {
+    return await hostFetchJson<{ valid: boolean; message?: string }>(`/api/plugins/${PLUGIN_ID}/config/test`, {
+      method: "POST",
+      body: JSON.stringify({ configJson: nextConfig }),
+    });
+  }
+
+  return {
+    configJson,
+    setConfigJson,
+    loading,
+    saving,
+    error,
+    save,
+    test,
+  };
+}
+
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "0.75rem", alignItems: "start" }}>
       <div style={{ fontSize: "0.85rem", color: "#475569" }}>{label}</div>
       <div style={{ fontSize: "0.92rem" }}>{value}</div>
+    </div>
+  );
+}
+
+function ChecklistItem({ item }: { item: SetupStatusData["checklist"][number] }) {
+  return (
+    <div style={{ ...cardStyle, gap: "0.35rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <span style={{
+          display: "inline-flex",
+          width: "0.7rem",
+          height: "0.7rem",
+          borderRadius: "999px",
+          background: item.done ? "#059669" : "#d97706",
+        }}
+        />
+        <strong style={{ fontSize: "0.95rem" }}>{item.label}</strong>
+      </div>
+      <div style={{ color: "#475569", fontSize: "0.88rem", lineHeight: 1.45 }}>{item.detail}</div>
+    </div>
+  );
+}
+
+function SetupSummaryCard({ data }: { data: SetupStatusData }) {
+  const companyStatus = data.companyStatus;
+  return (
+    <div style={cardStyle}>
+      <strong>Readiness</strong>
+      <Row label="Config valid" value={data.validation.ok ? "Yes" : "No"} />
+      <Row label="Workspace prefix" value={data.config.workspacePrefix} />
+      <Row label="Sync enabled" value={data.syncEnabled ? "Yes" : "No"} />
+      <Row label="Last company backfill" value={companyStatus?.lastBackfillAt ?? "Not run yet"} />
+      <Row label="Latest company error" value={companyStatus?.lastError?.message ?? "None"} />
+    </div>
+  );
+}
+
+export function HonchoDashboardWidget({ context }: PluginWidgetProps) {
+  const setupStatus = usePluginData<SetupStatusData>(DATA_KEYS.setupStatus, {
+    companyId: context.companyId,
+  });
+
+  if (setupStatus.loading) {
+    return <div style={sectionStyle}>Loading Honcho status…</div>;
+  }
+  if (setupStatus.error) {
+    return <div style={sectionStyle}>Plugin error: {setupStatus.error.message}</div>;
+  }
+  if (!setupStatus.data) {
+    return <div style={sectionStyle}>No Honcho status available.</div>;
+  }
+
+  const readyCount = setupStatus.data.checklist.filter((item) => item.done).length;
+  return (
+    <div style={sectionStyle}>
+      <div style={heroStyle}>
+        <strong>Honcho Memory</strong>
+        <div style={{ color: "#475569", fontSize: "0.9rem" }}>
+          {readyCount}/{setupStatus.data.checklist.length} onboarding checks complete for this company.
+        </div>
+      </div>
+      <SetupSummaryCard data={setupStatus.data} />
+    </div>
+  );
+}
+
+export function HonchoSettingsPage({ context }: PluginSettingsPageProps) {
+  const { configJson, setConfigJson, loading, saving, error, save, test } = useSettingsConfig();
+  const setupStatus = usePluginData<SetupStatusData>(DATA_KEYS.setupStatus, {
+    companyId: context.companyId,
+  });
+  const testConnection = usePluginAction(ACTION_KEYS.testConnection);
+  const backfillCompany = usePluginAction(ACTION_KEYS.backfillCompany);
+  const [formMessage, setFormMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
+  const [connectionState, setConnectionState] = useState<SettingsConnectionState>(null);
+  const [busyAction, setBusyAction] = useState<"test" | "backfill" | null>(null);
+
+  const nextSteps = useMemo(() => {
+    return setupStatus.data?.checklist.filter((item) => !item.done).map((item) => item.label) ?? [];
+  }, [setupStatus.data]);
+
+  if (loading) {
+    return <div style={sectionStyle}>Loading Honcho settings…</div>;
+  }
+
+  async function saveSettings() {
+    try {
+      await save(configJson);
+      setFormMessage({ tone: "success", text: "Settings saved." });
+      setupStatus.refresh();
+    } catch (nextError) {
+      setFormMessage({ tone: "error", text: nextError instanceof Error ? nextError.message : String(nextError) });
+    }
+  }
+
+  async function validateSettings() {
+    try {
+      const result = await test(configJson);
+      setFormMessage({
+        tone: result.valid ? "success" : "error",
+        text: result.message ?? (result.valid ? "Configuration is valid." : "Configuration is invalid."),
+      });
+    } catch (nextError) {
+      setFormMessage({ tone: "error", text: nextError instanceof Error ? nextError.message : String(nextError) });
+    }
+  }
+
+  async function runConnectionTest() {
+    setBusyAction("test");
+    try {
+      const result = await testConnection();
+      setConnectionState({
+        ok: Boolean((result as Record<string, unknown>).ok),
+        workspaceId: typeof (result as Record<string, unknown>).workspaceId === "string" ? (result as Record<string, unknown>).workspaceId as string : null,
+        at: typeof (result as Record<string, unknown>).at === "string" ? (result as Record<string, unknown>).at as string : null,
+      });
+      setFormMessage({ tone: "success", text: "Honcho connection succeeded." });
+    } catch (nextError) {
+      setConnectionState({ ok: false, workspaceId: null, at: null });
+      setFormMessage({ tone: "error", text: nextError instanceof Error ? nextError.message : String(nextError) });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function runBackfill() {
+    if (!context.companyId) {
+      setFormMessage({ tone: "error", text: "Select a company before running backfill." });
+      return;
+    }
+    setBusyAction("backfill");
+    try {
+      await backfillCompany({ companyId: context.companyId });
+      setFormMessage({ tone: "success", text: "Backfill started and completed for the current company." });
+      setupStatus.refresh();
+    } catch (nextError) {
+      setFormMessage({ tone: "error", text: nextError instanceof Error ? nextError.message : String(nextError) });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  return (
+    <div style={sectionStyle}>
+      <div style={heroStyle}>
+        <strong>Honcho Setup</strong>
+        <div style={{ color: "#475569", fontSize: "0.92rem", lineHeight: 1.45 }}>
+          Configure the Honcho API connection, validate the plugin configuration, and run an initial company backfill without leaving Paperclip.
+        </div>
+      </div>
+
+      <div style={gridStyle}>
+        <div style={cardStyle}>
+          <label style={labelStyle}>
+            <span>Honcho API base URL</span>
+            <input
+              style={inputStyle}
+              value={configJson.honchoApiBaseUrl}
+              onChange={(event) => setConfigJson((current) => ({ ...current, honchoApiBaseUrl: event.target.value }))}
+              placeholder="https://api.honcho.dev"
+            />
+          </label>
+          <label style={labelStyle}>
+            <span>Honcho API key secret reference</span>
+            <input
+              style={inputStyle}
+              value={configJson.honchoApiKeySecretRef}
+              onChange={(event) => setConfigJson((current) => ({ ...current, honchoApiKeySecretRef: event.target.value }))}
+              placeholder="HONCHO_API_KEY"
+            />
+          </label>
+          <label style={labelStyle}>
+            <span>Workspace prefix</span>
+            <input
+              style={inputStyle}
+              value={configJson.workspacePrefix}
+              onChange={(event) => setConfigJson((current) => ({ ...current, workspacePrefix: event.target.value }))}
+              placeholder="paperclip"
+            />
+          </label>
+        </div>
+
+        <div style={cardStyle}>
+          <label style={{ ...labelStyle, gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: "0.6rem" }}>
+            <input
+              type="checkbox"
+              checked={configJson.syncIssueComments}
+              onChange={(event) => setConfigJson((current) => ({ ...current, syncIssueComments: event.target.checked }))}
+            />
+            <span>Sync issue comments</span>
+          </label>
+          <label style={{ ...labelStyle, gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: "0.6rem" }}>
+            <input
+              type="checkbox"
+              checked={configJson.syncIssueDocuments}
+              onChange={(event) => setConfigJson((current) => ({ ...current, syncIssueDocuments: event.target.checked }))}
+            />
+            <span>Sync issue documents</span>
+          </label>
+          <label style={{ ...labelStyle, gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: "0.6rem" }}>
+            <input
+              type="checkbox"
+              checked={configJson.enablePeerChat}
+              onChange={(event) => setConfigJson((current) => ({ ...current, enablePeerChat: event.target.checked }))}
+            />
+            <span>Enable peer chat tool</span>
+          </label>
+          <div style={{ color: "#475569", fontSize: "0.86rem", lineHeight: 1.45 }}>
+            Comments-only sync is the safest starting point. Enable document sync after the connection is validated.
+          </div>
+        </div>
+      </div>
+
+      {formMessage ? (
+        <div style={{
+          ...cardStyle,
+          borderColor: formMessage.tone === "error" ? "rgba(153, 27, 27, 0.35)" : formMessage.tone === "success" ? "rgba(5, 150, 105, 0.35)" : "rgba(14, 116, 144, 0.35)",
+          color: formMessage.tone === "error" ? "#991b1b" : "#0f172a",
+        }}
+        >
+          {formMessage.text}
+        </div>
+      ) : null}
+
+      {error ? <div style={{ ...cardStyle, color: "#991b1b" }}>Config error: {error}</div> : null}
+
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button type="button" style={primaryButtonStyle} onClick={() => void saveSettings()} disabled={saving}>
+          {saving ? "Saving…" : "Save Settings"}
+        </button>
+        <button type="button" style={buttonStyle} onClick={() => void validateSettings()}>
+          Validate Config
+        </button>
+        <button type="button" style={buttonStyle} onClick={() => void runConnectionTest()} disabled={busyAction === "test"}>
+          {busyAction === "test" ? "Testing…" : "Test Connection"}
+        </button>
+        <button type="button" style={buttonStyle} onClick={() => void runBackfill()} disabled={busyAction === "backfill"}>
+          {busyAction === "backfill" ? "Backfilling…" : "Backfill Current Company"}
+        </button>
+      </div>
+
+      {connectionState ? (
+        <div style={cardStyle}>
+          <strong>Connection Result</strong>
+          <Row label="Status" value={connectionState.ok ? "Connected" : "Failed"} />
+          <Row label="Workspace returned" value={connectionState.workspaceId ?? "None"} />
+          <Row label="Checked at" value={connectionState.at ?? "Unknown"} />
+        </div>
+      ) : null}
+
+      {setupStatus.loading ? (
+        <div style={cardStyle}>Loading readiness status…</div>
+      ) : setupStatus.error ? (
+        <div style={{ ...cardStyle, color: "#991b1b" }}>Setup status error: {setupStatus.error.message}</div>
+      ) : setupStatus.data ? (
+        <>
+          <SetupSummaryCard data={setupStatus.data} />
+          <div style={gridStyle}>
+            {setupStatus.data.checklist.map((item) => <ChecklistItem key={item.key} item={item} />)}
+          </div>
+        </>
+      ) : null}
+
+      <div style={cardStyle}>
+        <strong>Suggested Setup Order</strong>
+        <ol style={{ margin: 0, paddingLeft: "1.1rem", display: "grid", gap: "0.35rem", color: "#475569" }}>
+          <li>Create a Paperclip secret containing the Honcho API key.</li>
+          <li>Save the plugin settings with the Honcho base URL and secret reference.</li>
+          <li>Run Validate Config, then Test Connection.</li>
+          <li>Run Backfill Current Company to populate existing issue memory.</li>
+        </ol>
+        {nextSteps.length > 0 ? (
+          <div style={{ fontSize: "0.86rem", color: "#475569" }}>
+            Remaining setup items: {nextSteps.join(", ")}.
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

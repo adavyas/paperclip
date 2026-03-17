@@ -20,7 +20,9 @@ const manifest: PaperclipPluginManifestV1 = {
     "agent.tools.register",
     "http.outbound",
     "secrets.read-ref",
+    "instance.settings.register",
     "ui.detailTab.register",
+    "ui.dashboardWidget.register",
   ],
   instanceConfigSchema: {
     type: "object",
@@ -105,6 +107,18 @@ const manifest: PaperclipPluginManifestV1 = {
   ],
   ui: {
     slots: [
+      {
+        type: "settingsPage",
+        id: SLOT_IDS.settingsPage,
+        displayName: "Honcho Settings",
+        exportName: EXPORT_NAMES.settingsPage,
+      },
+      {
+        type: "dashboardWidget",
+        id: SLOT_IDS.dashboardWidget,
+        displayName: "Honcho Memory",
+        exportName: EXPORT_NAMES.dashboardWidget,
+      },
       {
         type: "detailTab",
         id: SLOT_IDS.issueTab,

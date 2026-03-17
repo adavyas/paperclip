@@ -159,6 +159,33 @@ export type IssueMemoryStatusData = {
   };
 };
 
+export type SetupChecklistItem = {
+  key: string;
+  label: string;
+  done: boolean;
+  detail: string;
+};
+
+export type SetupStatusData = {
+  config: {
+    honchoApiBaseUrl: string;
+    honchoApiKeySecretRef: string;
+    workspacePrefix: string;
+    syncIssueComments: boolean;
+    syncIssueDocuments: boolean;
+    enablePeerChat: boolean;
+  };
+  validation: {
+    ok: boolean;
+    warnings: string[];
+    errors: string[];
+  };
+  syncEnabled: boolean;
+  companyId: string | null;
+  companyStatus: CompanySyncStatus | null;
+  checklist: SetupChecklistItem[];
+};
+
 export type WorkerActionParams = Record<string, unknown>;
 
 export type IssueDocumentRef = {

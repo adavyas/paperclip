@@ -125,4 +125,49 @@ describe("honcho actions and UI data", () => {
       message: expect.stringContaining("forced failure"),
     });
   });
+
+  it("returns setup-status data for the settings page and dashboard widget", async () => {
+    installFetchMock();
+    const harness = createHonchoHarness();
+
+    await plugin.definition.setup(harness.ctx);
+
+    const initial = await harness.getData<Record<string, unknown>>("setup-status", {
+      companyId: "co_1",
+    });
+
+    expect(initial.config).toMatchObject({
+      honchoApiBaseUrl: "https://api.honcho.dev",
+      honchoApiKeySecretRef: "HONCHO_API_KEY",
+      workspacePrefix: "paperclip",
+      syncIssueComments: true,
+      syncIssueDocuments: false,
+      enablePeerChat: false,
+    });
+    expect(initial.validation).toMatchObject({
+      ok: true,
+      warnings: [],
+      errors: [],
+    });
+    expect(initial.syncEnabled).toBe(true);
+    expect(initial.checklist).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "base-url", done: true }),
+      expect.objectContaining({ key: "secret-ref", done: true }),
+      expect.objectContaining({ key: "sync-source", done: true }),
+      expect.objectContaining({ key: "backfill", done: false }),
+    ]));
+
+    await harness.performAction("backfill-company", { companyId: "co_1" });
+
+    const afterBackfill = await harness.getData<Record<string, unknown>>("setup-status", {
+      companyId: "co_1",
+    });
+    expect(afterBackfill.companyStatus).toMatchObject({
+      lastBackfillAt: expect.any(String),
+      lastError: null,
+    });
+    expect(afterBackfill.checklist).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "backfill", done: true }),
+    ]));
+  });
 });

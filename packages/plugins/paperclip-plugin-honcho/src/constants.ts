@@ -14,14 +14,19 @@ export const DEFAULT_DOCUMENT_SECTION_OVERLAP = 200;
 export const DEFAULT_BACKFILL_BATCH_SIZE = 100;
 
 export const SLOT_IDS = {
+  settingsPage: "honcho-settings-page",
+  dashboardWidget: "honcho-dashboard-widget",
   issueTab: "honcho-issue-memory-tab",
 } as const;
 
 export const EXPORT_NAMES = {
+  settingsPage: "HonchoSettingsPage",
+  dashboardWidget: "HonchoDashboardWidget",
   issueTab: "HonchoIssueMemoryTab",
 } as const;
 
 export const DATA_KEYS = {
+  setupStatus: "setup-status",
   issueStatus: "issue-memory-status",
 } as const;
 

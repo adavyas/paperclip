@@ -4,6 +4,7 @@ import { ACTION_KEYS, DATA_KEYS, DEFAULT_SEARCH_LIMIT, TOOL_NAMES } from "./cons
 import { assertConfigured, getResolvedConfig, validateConfig } from "./config.js";
 import { createHonchoClient } from "./honcho-client.js";
 import { backfillCompany, getIssueContext, loadIssueStatusData, replayIssue, searchMemory, syncIssue } from "./sync.js";
+import { getCompanySyncStatus } from "./state.js";
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -20,6 +21,54 @@ function inferIssueId(params: Record<string, unknown>, runCtx?: Partial<ToolRunC
 const plugin = definePlugin({
   async setup(ctx) {
     const initialConfig = await getResolvedConfig(ctx);
+
+    ctx.data.register(DATA_KEYS.setupStatus, async (params) => {
+      const companyId = typeof params.companyId === "string" && params.companyId.trim()
+        ? params.companyId.trim()
+        : null;
+      const config = await getResolvedConfig(ctx);
+      const validation = validateConfig(config);
+      const companyStatus = companyId ? await getCompanySyncStatus(ctx, companyId) : null;
+      return {
+        config,
+        validation: {
+          ok: validation.ok,
+          warnings: validation.warnings ?? [],
+          errors: validation.errors ?? [],
+        },
+        syncEnabled: config.syncIssueComments || config.syncIssueDocuments,
+        companyId,
+        companyStatus,
+        checklist: [
+          {
+            key: "base-url",
+            label: "Honcho base URL configured",
+            done: config.honchoApiBaseUrl.length > 0,
+            detail: config.honchoApiBaseUrl || "Set the Honcho API base URL in plugin settings.",
+          },
+          {
+            key: "secret-ref",
+            label: "Honcho API key secret reference configured",
+            done: config.honchoApiKeySecretRef.length > 0,
+            detail: config.honchoApiKeySecretRef || "Create a Paperclip secret and set honchoApiKeySecretRef.",
+          },
+          {
+            key: "sync-source",
+            label: "At least one sync source enabled",
+            done: config.syncIssueComments || config.syncIssueDocuments,
+            detail: config.syncIssueComments || config.syncIssueDocuments
+              ? `Comments: ${config.syncIssueComments ? "on" : "off"}, Documents: ${config.syncIssueDocuments ? "on" : "off"}`
+              : "Enable issue comments or issue documents syncing.",
+          },
+          {
+            key: "backfill",
+            label: "Company backfill has run",
+            done: Boolean(companyStatus?.lastBackfillAt),
+            detail: companyStatus?.lastBackfillAt ?? "Run Backfill Current Company after testing the connection.",
+          },
+        ],
+      };
+    });
 
     ctx.data.register(DATA_KEYS.issueStatus, async (params) => {
       const issueId = requireString(params.issueId, "issueId");

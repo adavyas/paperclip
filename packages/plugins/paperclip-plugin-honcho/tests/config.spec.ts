@@ -10,6 +10,19 @@ afterEach(() => {
 });
 
 describe("honcho config", () => {
+  it("declares the settings page and dashboard widget using the current plugin framework slots", () => {
+    expect(manifest.capabilities).toEqual(expect.arrayContaining([
+      "instance.settings.register",
+      "ui.dashboardWidget.register",
+      "ui.detailTab.register",
+    ]));
+    expect(manifest.ui?.slots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "settingsPage", displayName: "Honcho Settings" }),
+      expect.objectContaining({ type: "dashboardWidget", displayName: "Honcho Memory" }),
+      expect.objectContaining({ type: "detailTab", displayName: "Memory" }),
+    ]));
+  });
+
   it("normalizes config values and applies defaults", async () => {
     const harness = createTestHarness({
       manifest,
