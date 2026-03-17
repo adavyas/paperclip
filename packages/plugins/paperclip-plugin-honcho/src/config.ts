@@ -19,6 +19,7 @@ export function resolveConfig(config: HonchoPluginConfig | Record<string, unknow
     syncIssueComments: normalizeBoolean(input.syncIssueComments, DEFAULT_CONFIG.syncIssueComments),
     syncIssueDocuments: normalizeBoolean(input.syncIssueDocuments, DEFAULT_CONFIG.syncIssueDocuments),
     enablePeerChat: normalizeBoolean(input.enablePeerChat, DEFAULT_CONFIG.enablePeerChat),
+    observeAgentPeers: normalizeBoolean(input.observeAgentPeers, DEFAULT_CONFIG.observeAgentPeers),
   };
 }
 

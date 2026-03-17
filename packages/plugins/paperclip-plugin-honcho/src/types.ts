@@ -14,6 +14,7 @@ export type HonchoPluginConfig = {
   syncIssueComments?: boolean;
   syncIssueDocuments?: boolean;
   enablePeerChat?: boolean;
+  observeAgentPeers?: boolean;
 };
 
 export type HonchoResolvedConfig = {
@@ -23,6 +24,7 @@ export type HonchoResolvedConfig = {
   syncIssueComments: boolean;
   syncIssueDocuments: boolean;
   enablePeerChat: boolean;
+  observeAgentPeers: boolean;
 };
 
 export type HonchoActor =
@@ -179,6 +181,7 @@ export type IssueMemoryStatusData = {
     syncIssueComments: boolean;
     syncIssueDocuments: boolean;
     enablePeerChat: boolean;
+    observeAgentPeers: boolean;
   };
 };
 
@@ -197,6 +200,7 @@ export type SetupStatusData = {
     syncIssueComments: boolean;
     syncIssueDocuments: boolean;
     enablePeerChat: boolean;
+    observeAgentPeers: boolean;
   };
   validation: {
     ok: boolean;

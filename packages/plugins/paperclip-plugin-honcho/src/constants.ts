@@ -51,6 +51,7 @@ export const DEFAULT_CONFIG = {
   syncIssueComments: true,
   syncIssueDocuments: false,
   enablePeerChat: false,
+  observeAgentPeers: false,
 } as const;
 
 export const ISSUE_STATUS_STATE_KEY = "issue-sync-status";

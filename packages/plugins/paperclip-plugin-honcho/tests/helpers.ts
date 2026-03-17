@@ -10,6 +10,7 @@ export const BASE_CONFIG = {
   syncIssueComments: true,
   syncIssueDocuments: false,
   enablePeerChat: false,
+  observeAgentPeers: false,
 };
 
 export type SeedOverrides = {

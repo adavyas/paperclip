@@ -291,6 +291,7 @@ export async function loadIssueStatusData(ctx: PluginContext, issueId: string, c
       syncIssueComments: config.syncIssueComments,
       syncIssueDocuments: config.syncIssueDocuments,
       enablePeerChat: config.enablePeerChat,
+      observeAgentPeers: config.observeAgentPeers,
     },
   };
 }

@@ -119,6 +119,7 @@ describe("honcho actions and UI data", () => {
       syncIssueComments: true,
       syncIssueDocuments: false,
       enablePeerChat: false,
+      observeAgentPeers: false,
     });
     expect(status.lastError).toMatchObject({
       issueId: "iss_1",
@@ -143,6 +144,7 @@ describe("honcho actions and UI data", () => {
       syncIssueComments: true,
       syncIssueDocuments: false,
       enablePeerChat: false,
+      observeAgentPeers: false,
     });
     expect(initial.validation).toMatchObject({
       ok: true,

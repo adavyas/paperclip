@@ -64,8 +64,39 @@ describe("honcho tools", () => {
       search_query: "auth regression",
       search_top_k: 5,
     });
+    const peerRequest = requestsMatching(requests, "/peers")[0];
+    expect(peerRequest?.body).toMatchObject({
+      config: {
+        observe_me: false,
+      },
+    });
     expect(representationRequest?.body).not.toHaveProperty("session_id");
     expect(representationRequest?.body).not.toHaveProperty("target");
+  });
+
+  it("allows agent peer observation to be enabled explicitly", async () => {
+    const { requests } = installFetchMock();
+    const harness = createHonchoHarness({
+      config: {
+        observeAgentPeers: true,
+      },
+    });
+
+    await plugin.definition.setup(harness.ctx);
+
+    await harness.executeTool("honcho_search_memory", { query: "auth regression" }, {
+      companyId: "co_1",
+      projectId: "proj_1",
+      agentId: "agent_1",
+      runId: "run_1",
+    });
+
+    const peerRequest = requestsMatching(requests, "/peers")[0];
+    expect(peerRequest?.body).toMatchObject({
+      config: {
+        observe_me: true,
+      },
+    });
   });
 
   it("defaults search to the current issue session and honors explicit workspace overrides", async () => {

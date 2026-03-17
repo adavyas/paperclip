@@ -61,6 +61,14 @@ const plugin = definePlugin({
               : "Enable issue comments or issue documents syncing.",
           },
           {
+            key: "agent-observation",
+            label: "Agent peer observation is configured",
+            done: true,
+            detail: config.observeAgentPeers
+              ? "Agent peer observation is enabled."
+              : "Agent peer observation is disabled.",
+          },
+          {
             key: "backfill",
             label: "Company backfill has run",
             done: Boolean(companyStatus?.lastBackfillAt),

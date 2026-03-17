@@ -84,6 +84,7 @@ type SettingsConfig = {
   syncIssueComments: boolean;
   syncIssueDocuments: boolean;
   enablePeerChat: boolean;
+  observeAgentPeers: boolean;
 };
 
 type SettingsConnectionState = {
@@ -125,6 +126,7 @@ function normalizeSettingsConfig(configJson: Record<string, unknown> | null | un
     syncIssueComments: typeof source.syncIssueComments === "boolean" ? source.syncIssueComments : DEFAULT_CONFIG.syncIssueComments,
     syncIssueDocuments: typeof source.syncIssueDocuments === "boolean" ? source.syncIssueDocuments : DEFAULT_CONFIG.syncIssueDocuments,
     enablePeerChat: typeof source.enablePeerChat === "boolean" ? source.enablePeerChat : DEFAULT_CONFIG.enablePeerChat,
+    observeAgentPeers: typeof source.observeAgentPeers === "boolean" ? source.observeAgentPeers : DEFAULT_CONFIG.observeAgentPeers,
   };
 }
 
@@ -248,6 +250,7 @@ function SetupSummaryCard({ data }: { data: SetupStatusData }) {
       <Row label="Config valid" value={data.validation.ok ? "Yes" : "No"} />
       <Row label="Workspace prefix" value={data.config.workspacePrefix} />
       <Row label="Sync enabled" value={data.syncEnabled ? "Yes" : "No"} />
+      <Row label="Agent peer observation" value={data.config.observeAgentPeers ? "Enabled" : "Disabled"} />
       <Row label="Last company backfill" value={companyStatus?.lastBackfillAt ?? "Not run yet"} />
       <Row label="Latest company error" value={companyStatus?.lastError?.message ?? "None"} />
     </div>
@@ -493,8 +496,16 @@ export function HonchoSettingsPage({ context }: PluginSettingsPageProps) {
             />
             <span>Enable peer chat tool</span>
           </label>
+          <label style={{ ...labelStyle, gridAutoFlow: "column", justifyContent: "start", alignItems: "center", gap: "0.6rem" }}>
+            <input
+              type="checkbox"
+              checked={configJson.observeAgentPeers}
+              onChange={(event) => setConfigJson((current) => ({ ...current, observeAgentPeers: event.target.checked }))}
+            />
+            <span>Allow Honcho to observe agent peers</span>
+          </label>
           <div style={{ color: "#475569", fontSize: "0.86rem", lineHeight: 1.45 }}>
-            Comments-only sync is the safest starting point. Enable document sync after the connection is validated.
+            Comments-only sync is the safest starting point. Agent peer observation defaults off and should only be enabled intentionally.
           </div>
         </div>
       </div>
@@ -623,6 +634,10 @@ export function HonchoIssueMemoryTab({ context }: PluginDetailTabProps) {
         <Row
           label="Peer chat tool"
           value={data.config.enablePeerChat ? "Enabled" : "Disabled"}
+        />
+        <Row
+          label="Agent peer observation"
+          value={data.config.observeAgentPeers ? "Enabled" : "Disabled"}
         />
       </div>
 

@@ -35,6 +35,7 @@ pnpm paperclipai plugin install ./packages/plugins/paperclip-plugin-honcho
    - `honchoApiBaseUrl`
    - `honchoApiKeySecretRef`
    - `workspacePrefix` if you want something other than `paperclip`
+   - `observeAgentPeers` only if you explicitly want Honcho to observe agent peers
 4. Save settings.
 5. Either click `Save And Initialize`, or run `Validate Config`, `Test Connection`, and `Backfill Current Company` manually.
 6. Confirm the readiness checklist shows the company as backfilled.
@@ -44,8 +45,9 @@ Recommended starting configuration:
 - `syncIssueComments: true`
 - `syncIssueDocuments: false`
 - `enablePeerChat: false`
+- `observeAgentPeers: false`
 
-Enable document sync only after the connection is validated.
+Enable document sync only after the connection is validated. Leave agent peer observation disabled unless you explicitly want provider-managed agent profiling behavior.
 
 ## Current Capabilities
 

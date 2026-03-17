@@ -33,6 +33,7 @@ describe("honcho config", () => {
         syncIssueComments: "unexpected",
         syncIssueDocuments: true,
         enablePeerChat: "nope",
+        observeAgentPeers: "nope",
       },
     });
 
@@ -44,6 +45,7 @@ describe("honcho config", () => {
     expect(resolved.syncIssueComments).toBe(true);
     expect(resolved.syncIssueDocuments).toBe(true);
     expect(resolved.enablePeerChat).toBe(false);
+    expect(resolved.observeAgentPeers).toBe(false);
   });
 
   it("implements the current SDK config validation hook", async () => {

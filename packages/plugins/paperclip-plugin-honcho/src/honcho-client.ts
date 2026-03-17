@@ -139,12 +139,18 @@ export class HonchoClient {
     return { workspaceId };
   }
 
-  async ensurePeer(companyId: string, peerId: string, metadata?: Record<string, unknown>): Promise<string> {
+  async ensurePeer(
+    companyId: string,
+    peerId: string,
+    metadata?: Record<string, unknown>,
+    peerConfig?: Record<string, unknown>,
+  ): Promise<string> {
     const workspaceId = await this.ensureWorkspace(companyId);
     await requestJson(this.ctx, this.config, this.apiKey, `${HONCHO_V3_PATH}/workspaces/${encodeURIComponent(workspaceId)}/peers`, {
       method: "POST",
       body: JSON.stringify({
         id: peerId,
+        config: peerConfig,
         metadata: {
           source_system: "paperclip",
           ...metadata,
@@ -247,6 +253,8 @@ export class HonchoClient {
     await this.ensurePeer(companyId, peerIdForAgent(agentId), {
       company_id: companyId,
       agent_id: agentId,
+    }, {
+      observe_me: this.config.observeAgentPeers,
     });
     const workspaceId = this.workspaceId(companyId);
     const scopedSessionId = params.scope === "workspace" ? undefined : params.issueId ? this.sessionId(params.issueId) : undefined;

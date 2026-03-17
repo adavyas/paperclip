@@ -57,6 +57,11 @@ const manifest: PaperclipPluginManifestV1 = {
         title: "Enable Peer Chat Tool",
         default: DEFAULT_CONFIG.enablePeerChat,
       },
+      observeAgentPeers: {
+        type: "boolean",
+        title: "Allow Honcho To Observe Agent Peers",
+        default: DEFAULT_CONFIG.observeAgentPeers,
+      },
     },
   },
   entrypoints: {
