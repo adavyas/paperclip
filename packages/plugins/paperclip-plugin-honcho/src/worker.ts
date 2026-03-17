@@ -34,8 +34,7 @@ const plugin = definePlugin({
         throw new Error(validation.errors?.join("; ") ?? "Honcho config is invalid");
       }
       const client = await createHonchoClient({ ctx, config });
-      const sampleCompanyId = "connection-test";
-      const workspaceId = await client.ensureWorkspace(sampleCompanyId);
+      const { workspaceId } = await client.probeConnection();
       return {
         ok: true,
         workspaceId,
@@ -87,27 +86,43 @@ const plugin = definePlugin({
     });
 
     ctx.events.on("issue.document.created", async (event) => {
-      const config = await getResolvedConfig(ctx);
-      if (!config.syncIssueDocuments || !event.entityId) return;
-      const payload = typeof event.payload === "object" && event.payload !== null
-        ? (event.payload as Record<string, unknown>)
-        : {};
-      await syncIssue(ctx, event.entityId, event.companyId, {
-        replay: false,
-        documentKeyHint: typeof payload.key === "string" ? payload.key : null,
-      });
+      try {
+        const config = await getResolvedConfig(ctx);
+        if (!config.syncIssueDocuments || !event.entityId) return;
+        const payload = typeof event.payload === "object" && event.payload !== null
+          ? (event.payload as Record<string, unknown>)
+          : {};
+        await syncIssue(ctx, event.entityId, event.companyId, {
+          replay: false,
+          documentKeyHint: typeof payload.key === "string" ? payload.key : null,
+        });
+      } catch (error) {
+        ctx.logger.warn("Honcho sync on issue.document.created failed", {
+          issueId: event.entityId,
+          companyId: event.companyId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
 
     ctx.events.on("issue.document.updated", async (event) => {
-      const config = await getResolvedConfig(ctx);
-      if (!config.syncIssueDocuments || !event.entityId) return;
-      const payload = typeof event.payload === "object" && event.payload !== null
-        ? (event.payload as Record<string, unknown>)
-        : {};
-      await syncIssue(ctx, event.entityId, event.companyId, {
-        replay: false,
-        documentKeyHint: typeof payload.key === "string" ? payload.key : null,
-      });
+      try {
+        const config = await getResolvedConfig(ctx);
+        if (!config.syncIssueDocuments || !event.entityId) return;
+        const payload = typeof event.payload === "object" && event.payload !== null
+          ? (event.payload as Record<string, unknown>)
+          : {};
+        await syncIssue(ctx, event.entityId, event.companyId, {
+          replay: false,
+          documentKeyHint: typeof payload.key === "string" ? payload.key : null,
+        });
+      } catch (error) {
+        ctx.logger.warn("Honcho sync on issue.document.updated failed", {
+          issueId: event.entityId,
+          companyId: event.companyId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
 
     ctx.tools.register(

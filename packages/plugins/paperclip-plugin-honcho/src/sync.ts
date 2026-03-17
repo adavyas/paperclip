@@ -217,6 +217,8 @@ export async function backfillCompany(ctx: PluginContext, companyId: string): Pr
   const config = await getResolvedConfig(ctx);
   let offset = 0;
   let processedIssues = 0;
+  let failedIssues = 0;
+  let lastFailure: { issueId: string; message: string } | null = null;
   while (true) {
     const issues = await ctx.issues.list({
       companyId,
@@ -225,20 +227,36 @@ export async function backfillCompany(ctx: PluginContext, companyId: string): Pr
     });
     if (issues.length === 0) break;
     for (const issue of issues) {
-      await syncIssue(ctx, issue.id, companyId, { replay: false });
-      processedIssues += 1;
+      try {
+        await syncIssue(ctx, issue.id, companyId, { replay: false });
+        processedIssues += 1;
+      } catch (error) {
+        failedIssues += 1;
+        lastFailure = {
+          issueId: issue.id,
+          message: error instanceof Error ? error.message : String(error),
+        };
+        ctx.logger.warn("Honcho backfill skipped issue after sync failure", {
+          companyId,
+          issueId: issue.id,
+          error: lastFailure.message,
+        });
+      }
     }
     offset += issues.length;
   }
-  await patchCompanySyncStatus(ctx, companyId, {
+  const nextStatus = {
     lastBackfillAt: new Date().toISOString(),
-    lastError: null,
-  });
-  if (!config.syncIssueComments && !config.syncIssueDocuments) {
-    await patchCompanySyncStatus(ctx, companyId, {
-      lastError: buildSyncErrorSummary({ message: "Honcho backfill completed with syncing disabled" }),
-    });
-  }
+    lastError: failedIssues > 0
+      ? buildSyncErrorSummary({
+        message: `Honcho backfill completed with ${failedIssues} failed issue sync(s)`,
+        issueId: lastFailure?.issueId ?? null,
+      })
+      : !config.syncIssueComments && !config.syncIssueDocuments
+        ? buildSyncErrorSummary({ message: "Honcho backfill completed with syncing disabled" })
+        : null,
+  };
+  await patchCompanySyncStatus(ctx, companyId, nextStatus);
   return { companyId, processedIssues };
 }
 

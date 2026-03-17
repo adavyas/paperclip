@@ -29,9 +29,11 @@ export type CapturedRequest = {
 
 type FetchMockOptions = {
   failOn?: Array<string | RegExp>;
+  failOnceOn?: Array<string | RegExp>;
   searchResults?: Array<Record<string, unknown>>;
   summaries?: string[];
   chatText?: string;
+  workspaceResponse?: Record<string, unknown>;
 };
 
 function matchesPattern(url: string, pattern: string | RegExp): boolean {
@@ -49,6 +51,9 @@ function parseBody(body: BodyInit | null | undefined): Record<string, unknown> |
 
 export function installFetchMock(options: FetchMockOptions = {}) {
   const requests: CapturedRequest[] = [];
+  const remainingFailOnce = new Map<string | RegExp, number>(
+    (options.failOnceOn ?? []).map((pattern) => [pattern, 1]),
+  );
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     requests.push({
@@ -60,9 +65,15 @@ export function installFetchMock(options: FetchMockOptions = {}) {
     if (options.failOn?.some((pattern) => matchesPattern(url, pattern))) {
       return new Response(JSON.stringify({ error: "forced failure" }), { status: 500 });
     }
+    for (const [pattern, remaining] of remainingFailOnce.entries()) {
+      if (remaining > 0 && matchesPattern(url, pattern)) {
+        remainingFailOnce.set(pattern, remaining - 1);
+        return new Response(JSON.stringify({ error: "forced failure" }), { status: 500 });
+      }
+    }
 
     if (url.endsWith("/v2/workspaces")) {
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      return new Response(JSON.stringify(options.workspaceResponse ?? { ok: true }), { status: 200 });
     }
     if (url.includes("/representation")) {
       return new Response(JSON.stringify({

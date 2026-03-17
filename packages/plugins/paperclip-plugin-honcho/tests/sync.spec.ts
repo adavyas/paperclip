@@ -221,4 +221,41 @@ describe("honcho sync", () => {
     }) as Record<string, unknown>;
     expect(state.lastSyncedDocumentRevisionId).toBe("rev_2");
   });
+
+  it("isolates document sync failures so the event bus does not reject the event", async () => {
+    installFetchMock({ failOn: ["/messages"] });
+    const harness = createHonchoHarness({
+      config: {
+        syncIssueComments: false,
+        syncIssueDocuments: true,
+      },
+    });
+
+    await plugin.definition.setup(harness.ctx);
+
+    await expect(harness.emit("issue.document.updated", { key: "design" }, {
+      entityId: "iss_1",
+      entityType: "issue",
+      companyId: "co_1",
+    })).resolves.toBeUndefined();
+
+    expect(harness.logs).toContainEqual(expect.objectContaining({
+      level: "warn",
+      message: "Honcho sync on issue.document.updated failed",
+    }));
+  });
+
+  it("avoids duplicate workspace upserts during append and context refresh", async () => {
+    const { requests } = installFetchMock();
+    const harness = createHonchoHarness();
+
+    await plugin.definition.setup(harness.ctx);
+    await harness.emit("issue.comment.created", { commentId: "c_2" }, {
+      entityId: "iss_1",
+      entityType: "issue",
+      companyId: "co_1",
+    });
+
+    expect(requests.filter((request) => request.url.endsWith("/v2/workspaces"))).toHaveLength(2);
+  });
 });

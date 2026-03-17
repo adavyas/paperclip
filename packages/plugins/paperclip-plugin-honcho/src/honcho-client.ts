@@ -1,5 +1,5 @@
 import type { PluginContext } from "@paperclipai/plugin-sdk";
-import { HONCHO_V2_PATH, HONCHO_V3_PATH } from "./constants.js";
+import { DEFAULT_CONTEXT_SUMMARY_LIMIT, HONCHO_CONNECTION_PROBE_PATH, HONCHO_V2_PATH, HONCHO_V3_PATH } from "./constants.js";
 import { peerIdForAgent, sessionIdForIssue, workspaceIdForCompany } from "./ids.js";
 import type {
   AskPeerParams,
@@ -98,6 +98,19 @@ export class HonchoClient {
     return workspaceId;
   }
 
+  async probeConnection(): Promise<{ workspaceId: string | null }> {
+    const payload = await requestJson(this.ctx, this.config, this.apiKey, HONCHO_CONNECTION_PROBE_PATH, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    const workspaceId = typeof payload.id === "string"
+      ? payload.id
+      : typeof payload.workspace_id === "string"
+        ? payload.workspace_id
+        : null;
+    return { workspaceId };
+  }
+
   async ensurePeer(companyId: string, peerId: string, metadata?: Record<string, unknown>): Promise<string> {
     const workspaceId = await this.ensureWorkspace(companyId);
     await requestJson(this.ctx, this.config, this.apiKey, `${HONCHO_V2_PATH}/workspaces/${encodeURIComponent(workspaceId)}/peers`, {
@@ -133,8 +146,8 @@ export class HonchoClient {
 
   async appendMessages(companyId: string, issueId: string, messages: HonchoMessageInput[]): Promise<void> {
     if (messages.length === 0) return;
-    const workspaceId = await this.ensureWorkspace(companyId);
     const sessionId = await this.ensureSession(companyId, issueId);
+    const workspaceId = this.workspaceId(companyId);
     await requestJson(
       this.ctx,
       this.config,
@@ -156,8 +169,8 @@ export class HonchoClient {
   }
 
   async getIssueContext(companyId: string, issueId: string): Promise<HonchoIssueContext> {
-    const workspaceId = await this.ensureWorkspace(companyId);
     const sessionId = await this.ensureSession(companyId, issueId);
+    const workspaceId = this.workspaceId(companyId);
     const payload = await requestJson(
       this.ctx,
       this.config,
@@ -175,7 +188,7 @@ export class HonchoClient {
     const preview = summaries
       .map((summary) => summary.summary ?? summary.content ?? "")
       .filter((value) => value.trim().length > 0)
-      .slice(0, 3)
+      .slice(0, DEFAULT_CONTEXT_SUMMARY_LIMIT)
       .join("\n\n")
       .trim() || null;
     return {
@@ -189,11 +202,11 @@ export class HonchoClient {
   }
 
   async searchMemory(companyId: string, agentId: string, params: SearchMemoryParams): Promise<HonchoSearchResult[]> {
-    const workspaceId = await this.ensureWorkspace(companyId);
     await this.ensurePeer(companyId, peerIdForAgent(agentId), {
       company_id: companyId,
       agent_id: agentId,
     });
+    const workspaceId = this.workspaceId(companyId);
     const scopedSessionId = params.scope === "workspace" ? undefined : params.issueId ? this.sessionId(params.issueId) : undefined;
     const payload = await requestJson(
       this.ctx,
