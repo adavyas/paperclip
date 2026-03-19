@@ -2,10 +2,6 @@
 
 Optional Honcho memory integration for Paperclip.
 
-This package is intended to be the install artifact for deployed Paperclip
-instances. Use local-path installs during development and npm or a private
-npm-compatible registry for product deployments.
-
 ## What It Does
 
 - syncs Paperclip issue comments into Honcho
@@ -16,38 +12,20 @@ npm-compatible registry for product deployments.
 
 Paperclip stays the system of record. Honcho is used as a derived memory layer.
 
-## Runtime Model
-
-- plugin workers are trusted code running with declared Paperclip capabilities
-- plugin UI runs as trusted same-origin code inside the main Paperclip app
-- this package does not depend on host-only UI internals or undocumented assets
-
 ## Development
 
 ```bash
 pnpm install
 pnpm --filter paperclip-plugin-honcho build
-pnpm --filter paperclip-plugin-honcho typecheck
 pnpm --filter paperclip-plugin-honcho test
 ```
 
 ## Install Into Paperclip
 
-Production install from npm:
-
-```bash
-pnpm paperclipai plugin install paperclip-plugin-honcho
-```
-
-Development install from a local checkout:
-
 ```bash
 pnpm --filter paperclip-plugin-honcho build
 pnpm paperclipai plugin install ./packages/plugins/paperclip-plugin-honcho
 ```
-
-If you publish internally, install from your private npm-compatible registry
-using the package name and version you released.
 
 ## Initial Setup
 
@@ -97,7 +75,5 @@ The plugin requests:
 
 ## Notes
 
-- Publish this package to npm or a private registry for production use.
-- Use local-path installs only for development and iteration.
 - This integration is easiest to run in the current self-hosted Paperclip plugin model.
 - Agent usage is currently strongest through plugin tools rather than automatic prompt-time memory injection.
