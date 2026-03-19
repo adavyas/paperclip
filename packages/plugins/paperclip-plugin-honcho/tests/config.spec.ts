@@ -44,7 +44,7 @@ describe("honcho config", () => {
     expect(resolved.workspacePrefix).toBe(BASE_CONFIG.workspacePrefix);
     expect(resolved.syncIssueComments).toBe(true);
     expect(resolved.syncIssueDocuments).toBe(true);
-    expect(resolved.enablePeerChat).toBe(false);
+    expect(resolved.enablePeerChat).toBe(true);
     expect(resolved.observeAgentPeers).toBe(false);
   });
 

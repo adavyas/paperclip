@@ -50,7 +50,7 @@ export const DEFAULT_CONFIG = {
   workspacePrefix: DEFAULT_WORKSPACE_PREFIX,
   syncIssueComments: true,
   syncIssueDocuments: false,
-  enablePeerChat: false,
+  enablePeerChat: true,
   observeAgentPeers: false,
 } as const;
 

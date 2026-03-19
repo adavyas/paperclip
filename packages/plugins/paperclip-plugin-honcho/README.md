@@ -44,7 +44,7 @@ Recommended starting configuration:
 
 - `syncIssueComments: true`
 - `syncIssueDocuments: false`
-- `enablePeerChat: false`
+- `enablePeerChat: true`
 - `observeAgentPeers: false`
 
 Enable document sync only after the connection is validated. Leave agent peer observation disabled unless you explicitly want provider-managed agent profiling behavior.
@@ -71,7 +71,7 @@ The plugin requests:
 
 - `honcho_get_issue_context`
 - `honcho_search_memory`
-- `honcho_ask_peer` when `enablePeerChat` is enabled
+- `honcho_ask_peer` by default, unless `enablePeerChat` is disabled
 
 ## Notes
 

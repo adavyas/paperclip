@@ -132,7 +132,11 @@ describe("honcho tools", () => {
 
   it("does not register honcho_ask_peer when peer chat is disabled", async () => {
     installFetchMock();
-    const harness = createHonchoHarness();
+    const harness = createHonchoHarness({
+      config: {
+        enablePeerChat: false,
+      },
+    });
 
     await plugin.definition.setup(harness.ctx);
 

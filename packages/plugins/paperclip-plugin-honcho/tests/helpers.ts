@@ -9,7 +9,7 @@ export const BASE_CONFIG = {
   workspacePrefix: "paperclip",
   syncIssueComments: true,
   syncIssueDocuments: false,
-  enablePeerChat: false,
+  enablePeerChat: true,
   observeAgentPeers: false,
 };
 

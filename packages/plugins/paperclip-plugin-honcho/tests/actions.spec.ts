@@ -118,7 +118,7 @@ describe("honcho actions and UI data", () => {
     expect(status.config).toMatchObject({
       syncIssueComments: true,
       syncIssueDocuments: false,
-      enablePeerChat: false,
+      enablePeerChat: true,
       observeAgentPeers: false,
     });
     expect(status.lastError).toMatchObject({
@@ -143,7 +143,7 @@ describe("honcho actions and UI data", () => {
       workspacePrefix: "paperclip",
       syncIssueComments: true,
       syncIssueDocuments: false,
-      enablePeerChat: false,
+      enablePeerChat: true,
       observeAgentPeers: false,
     });
     expect(initial.validation).toMatchObject({
