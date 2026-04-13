@@ -113,6 +113,7 @@ export class HonchoClient {
 
   async ensureWorkspace(companyId: string): Promise<string> {
     const workspaceId = this.workspaceId(companyId);
+    const company = await this.ctx.companies.get(companyId);
     await requestJson(this.ctx, this.config, this.apiKey, `${HONCHO_V3_PATH}/workspaces`, {
       method: "POST",
       body: JSON.stringify({
@@ -120,6 +121,8 @@ export class HonchoClient {
         metadata: {
           source_system: "paperclip",
           company_id: companyId,
+          company_name: company?.name ?? null,
+          name: company?.name ?? workspaceId,
         },
       }),
     });
@@ -163,6 +166,7 @@ export class HonchoClient {
   async ensureSession(companyId: string, issueId: string, metadata?: Record<string, unknown>): Promise<string> {
     const workspaceId = await this.ensureWorkspace(companyId);
     const sessionId = this.sessionId(issueId);
+    const issue = await this.ctx.issues.get(issueId, companyId);
     await requestJson(this.ctx, this.config, this.apiKey, `${HONCHO_V3_PATH}/workspaces/${encodeURIComponent(workspaceId)}/sessions`, {
       method: "POST",
       body: JSON.stringify({
@@ -171,6 +175,9 @@ export class HonchoClient {
           source_system: "paperclip",
           company_id: companyId,
           issue_id: issueId,
+          issue_identifier: issue?.identifier ?? null,
+          issue_title: issue?.title ?? null,
+          title: issue?.identifier ?? issue?.title ?? sessionId,
           ...metadata,
         },
       }),
@@ -250,9 +257,12 @@ export class HonchoClient {
   }
 
   async searchMemory(companyId: string, agentId: string, params: SearchMemoryParams): Promise<HonchoSearchResult[]> {
+    const agent = await this.ctx.agents.get(agentId, companyId);
     await this.ensurePeer(companyId, peerIdForAgent(agentId), {
       company_id: companyId,
       agent_id: agentId,
+      agent_name: agent?.name ?? null,
+      name: agent?.name ?? agentId,
     }, {
       observe_me: this.config.observeAgentPeers,
     });
